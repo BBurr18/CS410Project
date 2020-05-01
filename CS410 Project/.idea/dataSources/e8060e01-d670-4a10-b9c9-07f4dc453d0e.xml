@@ -24,8 +24,13 @@
     <database id="6" parent="1" name="grades">
       <ObjectId>16761</ObjectId>
       <Owner>user</Owner>
-      <IntrospectionStateNumber>15446</IntrospectionStateNumber>
+      <IntrospectionStateNumber>15547</IntrospectionStateNumber>
       <Current>1</Current>
+      <Relations>sequence|table|16770|16772|1
+sequence|table|16785|16787|1
+sequence|table|16835|16837|1
+sequence|table|16851|16853|1
+</Relations>
     </database>
     <database id="7" parent="1" name="hcibib">
       <ObjectId>16386</ObjectId>
@@ -89,7 +94,7 @@
       <Comment>standard public schema</Comment>
       <StateNumber>276</StateNumber>
       <Owner>user</Owner>
-      <IntrospectionStateNumber>15447</IntrospectionStateNumber>
+      <IntrospectionStateNumber>15548</IntrospectionStateNumber>
       <Current>1</Current>
     </schema>
     <access-method id="22" parent="6" name="heap">
@@ -159,5 +164,363 @@
     <language id="31" parent="6" name="internal"/>
     <language id="32" parent="6" name="plpgsql"/>
     <language id="33" parent="6" name="sql"/>
+    <sequence id="34" parent="21" name="categories_cat_id_seq">
+      <ObjectId>16835</ObjectId>
+      <StateNumber>15532</StateNumber>
+      <Owner>user</Owner>
+      <SequenceIdentity>1</SequenceIdentity>
+      <CacheSize>1</CacheSize>
+      <DataType>integer|0s</DataType>
+    </sequence>
+    <sequence id="35" parent="21" name="classes_class_id_seq">
+      <ObjectId>16785</ObjectId>
+      <StateNumber>15459</StateNumber>
+      <Owner>user</Owner>
+      <SequenceIdentity>1</SequenceIdentity>
+      <CacheSize>1</CacheSize>
+      <DataType>integer|0s</DataType>
+    </sequence>
+    <sequence id="36" parent="21" name="items_item_id_seq">
+      <ObjectId>16851</ObjectId>
+      <StateNumber>15541</StateNumber>
+      <Owner>user</Owner>
+      <SequenceIdentity>1</SequenceIdentity>
+      <CacheSize>1</CacheSize>
+      <DataType>integer|0s</DataType>
+    </sequence>
+    <sequence id="37" parent="21" name="students_student_id_seq">
+      <ObjectId>16770</ObjectId>
+      <StateNumber>15454</StateNumber>
+      <Owner>user</Owner>
+      <SequenceIdentity>1</SequenceIdentity>
+      <CacheSize>1</CacheSize>
+      <DataType>integer|0s</DataType>
+    </sequence>
+    <table id="38" parent="21" name="categories">
+      <ObjectId>16837</ObjectId>
+      <Owner>user</Owner>
+      <StateNumber>15532</StateNumber>
+    </table>
+    <table id="39" parent="21" name="classes">
+      <ObjectId>16787</ObjectId>
+      <Owner>user</Owner>
+      <StateNumber>15468</StateNumber>
+    </table>
+    <table id="40" parent="21" name="grades">
+      <ObjectId>16867</ObjectId>
+      <Owner>user</Owner>
+      <StateNumber>15546</StateNumber>
+    </table>
+    <table id="41" parent="21" name="items">
+      <ObjectId>16853</ObjectId>
+      <Owner>user</Owner>
+      <StateNumber>15541</StateNumber>
+    </table>
+    <table id="42" parent="21" name="students">
+      <ObjectId>16772</ObjectId>
+      <Owner>user</Owner>
+      <StateNumber>15454</StateNumber>
+    </table>
+    <table id="43" parent="21" name="students_in_classes">
+      <ObjectId>16796</ObjectId>
+      <Owner>user</Owner>
+      <StateNumber>15462</StateNumber>
+    </table>
+    <column id="44" parent="38" name="cat_id">
+      <Position>1</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15532</StateNumber>
+      <DefaultExpression>nextval(&apos;categories_cat_id_seq&apos;::regclass)</DefaultExpression>
+      <TypeId>23</TypeId>
+    </column>
+    <column id="45" parent="38" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15532</StateNumber>
+      <TypeId>1043</TypeId>
+    </column>
+    <column id="46" parent="38" name="weight">
+      <Position>3</Position>
+      <DataType>numeric|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15532</StateNumber>
+      <TypeId>1700</TypeId>
+    </column>
+    <column id="47" parent="38" name="class_id">
+      <Position>4</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15532</StateNumber>
+      <TypeId>23</TypeId>
+    </column>
+    <index id="48" parent="38" name="categories_pkey">
+      <ObjectId>16844</ObjectId>
+      <StateNumber>15532</StateNumber>
+      <ColNames>cat_id</ColNames>
+      <Unique>1</Unique>
+      <Primary>1</Primary>
+    </index>
+    <key id="49" parent="38" name="categories_pkey">
+      <ObjectId>16845</ObjectId>
+      <StateNumber>15532</StateNumber>
+      <ColNames>cat_id</ColNames>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>categories_pkey</UnderlyingIndexName>
+    </key>
+    <foreign-key id="50" parent="38" name="categories_class_id_fkey">
+      <ObjectId>16846</ObjectId>
+      <StateNumber>15532</StateNumber>
+      <ColNames>class_id</ColNames>
+      <RefTableId>16787</RefTableId>
+      <RefColPositions>1</RefColPositions>
+      <RefTableName>classes</RefTableName>
+      <RefKeyName>classes_pkey</RefKeyName>
+      <RefColNames>class_id</RefColNames>
+    </foreign-key>
+    <column id="51" parent="39" name="class_id">
+      <Position>1</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15459</StateNumber>
+      <DefaultExpression>nextval(&apos;classes_class_id_seq&apos;::regclass)</DefaultExpression>
+      <TypeId>23</TypeId>
+    </column>
+    <column id="52" parent="39" name="course_number">
+      <Position>2</Position>
+      <DataType>varchar(255)|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15459</StateNumber>
+      <TypeId>1043</TypeId>
+    </column>
+    <column id="53" parent="39" name="term">
+      <Position>3</Position>
+      <DataType>varchar(255)|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15459</StateNumber>
+      <TypeId>1043</TypeId>
+    </column>
+    <column id="54" parent="39" name="section_number">
+      <Position>4</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15459</StateNumber>
+      <TypeId>23</TypeId>
+    </column>
+    <column id="55" parent="39" name="description">
+      <Position>5</Position>
+      <DataType>varchar(255)|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15459</StateNumber>
+      <TypeId>1043</TypeId>
+    </column>
+    <index id="56" parent="39" name="classes_pkey">
+      <ObjectId>16794</ObjectId>
+      <StateNumber>15459</StateNumber>
+      <ColNames>class_id</ColNames>
+      <Unique>1</Unique>
+      <Primary>1</Primary>
+    </index>
+    <key id="57" parent="39" name="classes_pkey">
+      <ObjectId>16795</ObjectId>
+      <StateNumber>15459</StateNumber>
+      <ColNames>class_id</ColNames>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>classes_pkey</UnderlyingIndexName>
+    </key>
+    <column id="58" parent="40" name="item_id">
+      <Position>1</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15546</StateNumber>
+      <TypeId>23</TypeId>
+    </column>
+    <column id="59" parent="40" name="student_id">
+      <Position>2</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15546</StateNumber>
+      <TypeId>23</TypeId>
+    </column>
+    <column id="60" parent="40" name="grade">
+      <Position>3</Position>
+      <DataType>integer|0s</DataType>
+      <StateNumber>15546</StateNumber>
+      <TypeId>23</TypeId>
+    </column>
+    <index id="61" parent="40" name="grades_pkey">
+      <ObjectId>16870</ObjectId>
+      <StateNumber>15546</StateNumber>
+      <ColNames>student_id
+item_id</ColNames>
+      <Unique>1</Unique>
+      <Primary>1</Primary>
+    </index>
+    <key id="62" parent="40" name="grades_pkey">
+      <ObjectId>16871</ObjectId>
+      <StateNumber>15546</StateNumber>
+      <ColNames>student_id
+item_id</ColNames>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>grades_pkey</UnderlyingIndexName>
+    </key>
+    <column id="63" parent="41" name="item_id">
+      <Position>1</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15541</StateNumber>
+      <DefaultExpression>nextval(&apos;items_item_id_seq&apos;::regclass)</DefaultExpression>
+      <TypeId>23</TypeId>
+    </column>
+    <column id="64" parent="41" name="name">
+      <Position>2</Position>
+      <DataType>varchar(255)|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15541</StateNumber>
+      <TypeId>1043</TypeId>
+    </column>
+    <column id="65" parent="41" name="description">
+      <Position>3</Position>
+      <DataType>varchar(255)|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15541</StateNumber>
+      <TypeId>1043</TypeId>
+    </column>
+    <column id="66" parent="41" name="point_value">
+      <Position>4</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15541</StateNumber>
+      <TypeId>23</TypeId>
+    </column>
+    <column id="67" parent="41" name="cat_id">
+      <Position>5</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15541</StateNumber>
+      <TypeId>23</TypeId>
+    </column>
+    <index id="68" parent="41" name="items_pkey">
+      <ObjectId>16860</ObjectId>
+      <StateNumber>15541</StateNumber>
+      <ColNames>item_id</ColNames>
+      <Unique>1</Unique>
+      <Primary>1</Primary>
+    </index>
+    <key id="69" parent="41" name="items_pkey">
+      <ObjectId>16861</ObjectId>
+      <StateNumber>15541</StateNumber>
+      <ColNames>item_id</ColNames>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>items_pkey</UnderlyingIndexName>
+    </key>
+    <foreign-key id="70" parent="41" name="items_cat_id_fkey">
+      <ObjectId>16862</ObjectId>
+      <StateNumber>15541</StateNumber>
+      <ColNames>cat_id</ColNames>
+      <RefTableId>16837</RefTableId>
+      <RefColPositions>1</RefColPositions>
+      <RefTableName>categories</RefTableName>
+      <RefKeyName>categories_pkey</RefKeyName>
+      <RefColNames>cat_id</RefColNames>
+    </foreign-key>
+    <column id="71" parent="42" name="student_id">
+      <Position>1</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15454</StateNumber>
+      <DefaultExpression>nextval(&apos;students_student_id_seq&apos;::regclass)</DefaultExpression>
+      <TypeId>23</TypeId>
+    </column>
+    <column id="72" parent="42" name="username">
+      <Position>2</Position>
+      <DataType>varchar(255)|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15454</StateNumber>
+      <TypeId>1043</TypeId>
+    </column>
+    <column id="73" parent="42" name="name">
+      <Position>3</Position>
+      <DataType>varchar(255)|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15454</StateNumber>
+      <TypeId>1043</TypeId>
+    </column>
+    <column id="74" parent="42" name="email_address">
+      <Position>4</Position>
+      <DataType>varchar(255)|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15454</StateNumber>
+      <TypeId>1043</TypeId>
+    </column>
+    <index id="75" parent="42" name="students_pkey">
+      <ObjectId>16779</ObjectId>
+      <StateNumber>15454</StateNumber>
+      <ColNames>student_id</ColNames>
+      <Unique>1</Unique>
+      <Primary>1</Primary>
+    </index>
+    <index id="76" parent="42" name="students_username_key">
+      <ObjectId>16781</ObjectId>
+      <StateNumber>15454</StateNumber>
+      <ColNames>username</ColNames>
+      <Unique>1</Unique>
+    </index>
+    <index id="77" parent="42" name="students_email_address_key">
+      <ObjectId>16783</ObjectId>
+      <StateNumber>15454</StateNumber>
+      <ColNames>email_address</ColNames>
+      <Unique>1</Unique>
+    </index>
+    <key id="78" parent="42" name="students_pkey">
+      <ObjectId>16780</ObjectId>
+      <StateNumber>15454</StateNumber>
+      <ColNames>student_id</ColNames>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>students_pkey</UnderlyingIndexName>
+    </key>
+    <key id="79" parent="42" name="students_username_key">
+      <ObjectId>16782</ObjectId>
+      <StateNumber>15454</StateNumber>
+      <ColNames>username</ColNames>
+      <UnderlyingIndexName>students_username_key</UnderlyingIndexName>
+    </key>
+    <key id="80" parent="42" name="students_email_address_key">
+      <ObjectId>16784</ObjectId>
+      <StateNumber>15454</StateNumber>
+      <ColNames>email_address</ColNames>
+      <UnderlyingIndexName>students_email_address_key</UnderlyingIndexName>
+    </key>
+    <column id="81" parent="43" name="student_id">
+      <Position>1</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15462</StateNumber>
+      <TypeId>23</TypeId>
+    </column>
+    <column id="82" parent="43" name="class_id">
+      <Position>2</Position>
+      <DataType>integer|0s</DataType>
+      <NotNull>1</NotNull>
+      <StateNumber>15462</StateNumber>
+      <TypeId>23</TypeId>
+    </column>
+    <index id="83" parent="43" name="students_in_classes_pkey">
+      <ObjectId>16799</ObjectId>
+      <StateNumber>15462</StateNumber>
+      <ColNames>student_id
+class_id</ColNames>
+      <Unique>1</Unique>
+      <Primary>1</Primary>
+    </index>
+    <key id="84" parent="43" name="students_in_classes_pkey">
+      <ObjectId>16800</ObjectId>
+      <StateNumber>15462</StateNumber>
+      <ColNames>student_id
+class_id</ColNames>
+      <Primary>1</Primary>
+      <UnderlyingIndexName>students_in_classes_pkey</UnderlyingIndexName>
+    </key>
   </database-model>
 </dataSource>
