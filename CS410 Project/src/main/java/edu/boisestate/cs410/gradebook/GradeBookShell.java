@@ -36,7 +36,8 @@ public class GradeBookShell {
     }
 
     @Command
-    public void classes (String course_number, String term) throws SQLException {
+    public void select (String course_number, String term) throws SQLException {
+
         String query =
                 "SELECT class_id, course_number, term\n" +
                         "FROM classes\n" +
@@ -59,7 +60,7 @@ public class GradeBookShell {
     }
 
     @Command
-    public void classes (String course_number, String term, int section_number) throws SQLException {
+    public void select (String course_number, String term, int section_number) throws SQLException {
         String query =
                 "SELECT class_id, course_number, term, section_number\n" +
                         "FROM classes\n" +
