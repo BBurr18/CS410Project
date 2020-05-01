@@ -37,6 +37,7 @@ public class GradeBookShell {
 
     @Command
     public void classes (String course_number, String term) throws SQLException {
+
         String query =
                 "SELECT class_id, course_number, term\n" +
                         "FROM classes\n" +
@@ -60,6 +61,7 @@ public class GradeBookShell {
 
     @Command
     public void classes (String course_number, String term, int section_number) throws SQLException {
+
         String query =
                 "SELECT class_id, course_number, term, section_number\n" +
                         "FROM classes\n" +
@@ -89,6 +91,7 @@ public class GradeBookShell {
     public void categories (String course_number) throws SQLException {
         String query =
                 "SELECT class_id, course_number, \n" +
+
                         "cat_id, name, weight\n" +
                         "FROM classes\n" +
                         "join categories using (class_id)\n" +
@@ -117,6 +120,7 @@ public class GradeBookShell {
             }
         }
     }
+
 
     @Command
     public void items (String course_number) throws SQLException {
