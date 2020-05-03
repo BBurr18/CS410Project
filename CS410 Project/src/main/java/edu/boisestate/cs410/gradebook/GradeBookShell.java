@@ -3,6 +3,9 @@ package edu.boisestate.cs410.gradebook;
 import com.budhash.cliche.Command;
 import com.budhash.cliche.ShellFactory;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.*;
@@ -19,24 +22,57 @@ public class GradeBookShell {
     @Command
     public void selectClass (String course_number) throws SQLException {
         String query =
-                "SELECT class_id, course_number\n" +
+                "SELECT class_id, course_number,term\n" +
                         "FROM classes\n" +
                         "WHERE course_number = ?;";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setString(1, course_number);
             try (ResultSet rs = stmt.executeQuery()) {
-                if (!rs.next() || rs.getRow() > 1) {
-                    System.err.format("%d: class does not exist%n", course_number);
+                if (!rs.next()) {
+                    System.err.format("%s: class does not exist%n", course_number);
                     return;
+                }else {
+                    String term = rs.getString("term");
+                    if(isCurrentTerm(term)){
+                        System.err.format("Class is not in the current term%n");
+                        return;
+                    }
                 }
                 active_class_pkey = rs.getInt("class_id");
                 System.out.format("%s %s%n",
                         rs.getString("class_id"),
-                        rs.getString("course_number"));
+                        rs.getString("course_number"),
+                        rs.getString("term"));
             }
         }
     }
 
+    public boolean isCurrentTerm(String term){
+        String curr_term;
+        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+        Date date = new Date();
+        String formatted_date = dateFormat.format(date);
+        String month_string = formatted_date.substring(5,7);
+        if(month_string.contains("0")){
+            month_string = month_string.substring(1,2);
+        }
+        int month_num = Integer.parseInt(month_string);
+        if(month_num <= 5){
+            curr_term = "Sp";
+
+        }else if(month_num > 5 && month_num < 8 ){
+            curr_term = "Su";
+        }else{
+           curr_term = "Fa";
+        }
+        curr_term = curr_term + formatted_date.substring(2,4);
+        if(curr_term == term){
+            return true;
+        }else{
+            return false;
+        }
+
+    }
     @Command
     public void selectClass (String course_number, String term) throws SQLException {
 
@@ -49,7 +85,7 @@ public class GradeBookShell {
             stmt.setString(1, course_number);
             stmt.setString(2, term);
             try (ResultSet rs = stmt.executeQuery()) {
-                if (!rs.next() || rs.getRow() > 1) {
+                if (!rs.next() ) {
                     System.err.format("%d: class does not exist%n", course_number);
                     return;
                 }
@@ -76,7 +112,7 @@ public class GradeBookShell {
             stmt.setString(2, term);
             stmt.setInt(3, section_number);
             try (ResultSet rs = stmt.executeQuery()) {
-                if (!rs.next() || rs.getRow() >1) {
+                if (!rs.next()) {
                     System.err.format("%s: class does not exist%n", course_number);
                     return;
                 }
@@ -254,6 +290,7 @@ public class GradeBookShell {
         int cat_id;
         db.setAutoCommit(false);
         try {
+
             try (PreparedStatement stmt = db.prepareStatement(insertCategory, Statement.RETURN_GENERATED_KEYS)) {
                 stmt.setString(1, name);
                 stmt.setInt(2, weight);
@@ -285,16 +322,15 @@ public class GradeBookShell {
         int ret_cat_id;
         db.setAutoCommit(false);
         try {
-            try (PreparedStatement stmt = db.prepareStatement(selectCatID, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, cat_name);
-                stmt.setInt(2, active_class_pkey);
-                stmt.executeUpdate();
-                // fetch the generated class_id
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
+            try (PreparedStatement stmt = db.prepareStatement(selectCatID)) {
+                stmt.setString(1,cat_name);
+                stmt.setInt(2,active_class_pkey);
+                try (ResultSet rs = stmt.executeQuery()) {
                     if (!rs.next()) {
-                        throw new RuntimeException("no cat_id returned");
+                        System.err.format("Nothing returned:%s%n");
+                        return;
                     }
-                   ret_cat_id = rs.getInt("cat_id");
+                    ret_cat_id = rs.getInt("cat_id");
                 }
             }
 
@@ -322,8 +358,197 @@ public class GradeBookShell {
         }
     }
 
+    @Command
+    public void addStudent (String username, int student_id ,String name) throws SQLException {
+        String insertStudent = "Insert into students (student_id,username, name, email_address) values (?,?,?,?)";
+        String checkStudent = "select name from students where student_id = ?";
+        String updateStudent = "Update students set name = ? where student_id = ?";
+        int enroll_id = student_id;
+        boolean needsAdded = false;
+        boolean needsUpdate = false;
+        int new_item_id;
+        String ret_name;
+        db.setAutoCommit(false);
+        try {
+            try (PreparedStatement stmt = db.prepareStatement(checkStudent)) {
+                stmt.setInt(1,student_id);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (!rs.next()) {
+                        needsAdded = true;
+                        System.out.format("Adding the student...:%n");
+                    }else{
+                        ret_name = rs.getString("name");
+                        if(ret_name != name){ needsUpdate = true; }
+                    }
+
+                }
+            }
+            if(needsAdded){
+                try (PreparedStatement stmt = db.prepareStatement(insertStudent, Statement.RETURN_GENERATED_KEYS)) {
+                    stmt.setInt(1, student_id);
+                    stmt.setString(2, username);
+                    stmt.setString(3, name);
+                    String email = username + "@gmail.com";
+                    stmt.setString(4, email);
+                    stmt.executeUpdate();
+                    // fetch the generated class_id
+                    try (ResultSet rs = stmt.getGeneratedKeys()) {
+                        if (!rs.next()) {
+                            throw new RuntimeException("no generated key");
+                        }
+                        new_item_id = rs.getInt(1);
+                        System.out.println("new_item_id: " + new_item_id);
+                        System.out.format("Creating item %d%n", new_item_id);
+                        enroll_id = new_item_id;
+                        //enroll_in_active_class(new_item_id, active_class_pkey);
+                    }
+                }
+            }else if(needsUpdate){
+                try (PreparedStatement stmt = db.prepareStatement(updateStudent, Statement.RETURN_GENERATED_KEYS)) {
+
+                    stmt.setString(1, name);
+                    stmt.setInt(2, student_id);
+                    stmt.executeUpdate();
+                    // fetch the generated class_id
+                    try (ResultSet rs = stmt.getGeneratedKeys()) {
+                        if (!rs.next()) {
+                            throw new RuntimeException("Student not updated.%n");
+                        }
+                        new_item_id = rs.getInt(1);
+                        System.out.format("Warning Updated name in student_id %d%n", new_item_id);
+                        enroll_id = new_item_id;
+                        //enroll_in_active_class(new_item_id, active_class_pkey);
+                    }
+                }
+
+            }else {
+
+            }
+
+            db.commit();
+        } catch (SQLException | RuntimeException e) {
+            db.rollback();
+            throw e;
+        } finally {
+            db.setAutoCommit(true);
+        }
+        enroll_in_active_class(enroll_id,active_class_pkey);
+    }
+    @Command
+    public void addStudent (String username) throws SQLException {
+        String checkStudent = "select name,student_id from students where username = ?";
+        int new_item_id;
+        String ret_name;
+        int student_id;
+        db.setAutoCommit(false);
+        try {
+            try (PreparedStatement stmt = db.prepareStatement(checkStudent)) {
+                stmt.setString(1,username);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (!rs.next()) {
+                        throw new RuntimeException("no student by that username");
+                    }else{
+                        ret_name = rs.getString("name");
+                        student_id = rs.getInt("student_id");
+                    }
+
+                }
+            }
+            db.commit();
+        } catch (SQLException | RuntimeException e) {
+            db.rollback();
+            throw e;
+        } finally {
+            db.setAutoCommit(true);
+        }
+        enroll_in_active_class(student_id,active_class_pkey);
+    }
+    public void enroll_in_active_class (int student_id, int class_id) throws SQLException {
+        String enroll = "insert into students_in_classes (student_id,class_id) values (?,?)";
+        int s_i_c_id;
+        db.setAutoCommit(false);
+        try {
+
+            try (PreparedStatement stmt = db.prepareStatement(enroll, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setInt(1, student_id);
+                stmt.setInt(2, active_class_pkey);
+                stmt.executeUpdate();
+                // fetch the generated class_id
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (!rs.next()) {
+                        throw new RuntimeException("no enrollment id generated");
+                    }
+                    s_i_c_id = rs.getInt(1);
+                    System.out.format("Creating enrollment %d%n", s_i_c_id);
+                }
+            }
+            db.commit();
+        } catch (SQLException | RuntimeException e) {
+            db.rollback();
+            throw e;
+        } finally {
+            db.setAutoCommit(true);
+        }
+    }
+
+    @Command
+    public void grade(String itemname,String username, int grade) throws SQLException{
+        String insertGrade = "insert into grades (item_id, student_id, grade) Values (?, ?,?)";
+        int grade_id;
+        db.setAutoCommit(false);
+        try {
+            try (PreparedStatement stmt = db.prepareStatement(insertGrade, Statement.RETURN_GENERATED_KEYS)) {
+                stmt.setString(1, itemname);
+                stmt.setString(2, username);
+                stmt.setInt(3, grade);
+                stmt.executeUpdate();
+                // fetch the generated class_id
+                try (ResultSet rs = stmt.getGeneratedKeys()) {
+                    if (!rs.next()) {
+                        throw new RuntimeException("no grade id generated");
+                    }
+                    grade_id = rs.getInt(1);
+                    System.out.format("Creating enrollment %d%n", grade_id);
+                }
+            }
+            db.commit();
+        } catch (SQLException | RuntimeException e) {
+            db.rollback();
+            throw e;
+        } finally {
+            db.setAutoCommit(true);
+        }
+
+    }
+
+    public boolean gradeExists(String itemname, String username) throws SQLException{
+        String selectItemId = "select g.item_id from grades g\n" +
+                "Join items i using(item_id)\n" +
+                "Join students s on g.student_id = s.student_id\n" +
+                "where i.name = ?\n" +
+                "and s.username = ?";
+        try (PreparedStatement stmt = db.prepareStatement(selectItemId)) {
+            stmt.setString(1, itemname);
+            stmt.setString(2, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    System.err.format("%s: item does not exist not exist%n", itemname );
+                    return false;
+                }
+                active_class_pkey = rs.getInt("class_id");
+                System.out.format("%s %s%n",
+                        rs.getString("class_id"),
+                        rs.getString("course_number"),
+                        rs.getString("term"));
+            }
+        }
+        return true;
+
+    }
+
     public static void main(String[] args) throws IOException, SQLException {
         // First (and only) command line argument: database URL
+
         String dbUrl = args[0];
         try (Connection cxn = DriverManager.getConnection("jdbc:" + dbUrl)) {
             GradeBookShell shell = new GradeBookShell(cxn);
