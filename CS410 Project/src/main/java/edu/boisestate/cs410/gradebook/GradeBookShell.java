@@ -107,30 +107,45 @@ public void selectClass (String course_number) throws SQLException {
         }
 
     }
-    @Command
-    public void selectClass (String course_number, String term) throws SQLException {
 
-        String query =
-                "SELECT class_id, course_number, term\n" +
-                        "FROM classes\n" +
-                        "WHERE course_number = ?" +
-                        "and term = ?;";
-        try (PreparedStatement stmt = db.prepareStatement(query)) {
-            stmt.setString(1, course_number);
-            stmt.setString(2, term);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (!rs.next() ) {
-                    System.err.format("%d: class does not exist%n", course_number);
-                    return;
-                }
+    @Command
+public void selectClass (String course_number, String term) throws SQLException {
+
+    String query =
+            "SELECT class_id, course_number, term\n" +
+                    "FROM classes\n" +
+                    "WHERE course_number = ?" +
+                    "and term = ?;";
+    try (PreparedStatement stmt = db.prepareStatement(query, ResultSet.TYPE_SCROLL_INSENSITIVE,
+            ResultSet.CONCUR_UPDATABLE)) {
+        stmt.setString(1, course_number);
+        stmt.setString(2, term);
+        try (ResultSet rs = stmt.executeQuery()) {
+            if (!rs.next()) {
+                System.err.format("%s: class does not exist%n", course_number);
+                return;
+            }
+            rs.last();
+
+            int rowCount = rs.getRow();
+
+            if(rowCount == 1) {
                 active_class_pkey = rs.getInt("class_id");
                 System.out.format("%s %s %s %n",
                         rs.getString("class_id"),
                         rs.getString("course_number"),
                         rs.getString("term"));
+            } else {
+                System.err.format("Too many %s classes to select one %n", course_number);
+                return;
             }
+
         }
+
     }
+}
+
+
 
     @Command
     public void selectClass (String course_number, String term, int section_number) throws SQLException {
