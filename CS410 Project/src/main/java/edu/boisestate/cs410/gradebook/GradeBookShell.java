@@ -17,6 +17,27 @@ public class GradeBookShell {
     public GradeBookShell(Connection cxn) {
         db = cxn;
     }
+
+    @Command
+    public void showClass () throws SQLException {
+        String query =
+                "SELECT class_id, course_number \n" +
+                        "FROM classes\n" +
+                        "WHERE class_id = ?;";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setInt(1, active_class_pkey);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    System.err.format("%d: class does not exist%n", active_class_pkey);
+                    return;
+                }
+                System.out.format("%s %s %n",
+                        rs.getInt("class_id"),
+                        rs.getString("course_number"));
+            }
+        }
+    }
+
     // I am not sure if this is all he is looking for in the select
     // Also I don't think the error handling is correct
     @Command
@@ -163,21 +184,21 @@ public class GradeBookShell {
 
 
     @Command
-    public void showItems (String course_number) throws SQLException {
+    public void showItems () throws SQLException {
         String query =
                 "SELECT course_number, cat_id, cat.name, \n" +
                         "       item_id, i.name as item_name, point_value\n" +
                         "FROM classes c\n" +
                         "join categories cat using (class_id)\n" +
                         "join items i using (cat_id)\n" +
-                        "WHERE course_number = ?\n" +
+                        "WHERE class_id = ?\n" +
                         "group by cat.name, course_number, item_id, cat_id\n" +
                         "order by cat_id;";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
-            stmt.setString(1, course_number);
+            stmt.setInt(1, active_class_pkey);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (!rs.next()) {
-                    System.err.format("%d: class does not exist%n", course_number);
+                    System.err.format("%d: class does not exist%n", active_class_pkey);
                     return;
                 }
                 System.out.format("%s %s %s %s %s %d %n",
@@ -199,6 +220,7 @@ public class GradeBookShell {
             }
         }
     }
+
     //new-class command, also newClass = new-class in the run window when executing the command, dont ask me why
    @Command
     public void newClass (String course_num, String term, int section_num,String description) throws SQLException {
@@ -653,6 +675,74 @@ public class GradeBookShell {
         }
     }
 
+    @Command
+    public void showStudents () throws SQLException {
+        String query =
+                "SELECT course_number, student_id, name, username, email_address \n" +
+                        "FROM students s\n" +
+                        "join students_in_classes sic using (student_id)\n" +
+                        "join classes c using (class_id)\n" +
+                        "WHERE class_id = ?;";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setInt(1, active_class_pkey);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    System.err.format("%d: class does not exist%n", active_class_pkey);
+                    return;
+                }
+                System.out.format("%s %s %s %s %s %n",
+                        rs.getString("course_number"),
+                        rs.getInt("student_id"),
+                        rs.getString("name"),
+                        rs.getString("username"),
+                        rs.getString("email_address"));
+                while (rs.next()) {
+                    System.out.format("%s %s %s %s %s %n",
+                            rs.getString("course_number"),
+                            rs.getInt("student_id"),
+                            rs.getString("name"),
+                            rs.getString("username"),
+                            rs.getString("email_address"));
+                }
+            }
+        }
+    }
+
+    @Command
+    public void showStudents (String EKS) throws SQLException {
+        String query =
+                "SELECT course_number, student_id, name, username, email_address\n" +
+                        "FROM students\n" +
+                        "join students_in_classes sic using (student_id)\n" +
+                        "join classes c using (class_id)\n" +
+                        "WHERE class_id = ?\n" +
+                        "and upper(name) LIKE upper(?) or upper(username) LIKE upper(?);";
+        try (PreparedStatement stmt = db.prepareStatement(query)) {
+            stmt.setInt(1, active_class_pkey);
+            stmt.setString(2, "%" + EKS + "%");
+            stmt.setString(3, "%" + EKS + "%");
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    System.err.format("%d: class does not exist%n", active_class_pkey, EKS);
+                    return;
+                }
+                System.out.format("%s %s %s %s %s %n",
+                        rs.getString("course_number"),
+                        rs.getInt("student_id"),
+                        rs.getString("name"),
+                        rs.getString("username"),
+                        rs.getString("email_address"));
+                while (rs.next()) {
+                    System.out.format("%s %s %s %s %s %n",
+                            rs.getString("course_number"),
+                            rs.getInt("student_id"),
+                            rs.getString("name"),
+                            rs.getString("username"),
+                            rs.getString("email_address"));
+                }
+            }
+        }
+    }
 
     public static void main(String[] args) throws IOException, SQLException {
         // First (and only) command line argument: database URL
