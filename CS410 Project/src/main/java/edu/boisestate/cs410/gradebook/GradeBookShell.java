@@ -41,32 +41,45 @@ public class GradeBookShell {
     // I am not sure if this is all he is looking for in the select
     // Also I don't think the error handling is correct
     @Command
-    public void selectClass (String course_number) throws SQLException {
-        String query =
-                "SELECT class_id, course_number,term\n" +
-                        "FROM classes\n" +
-                        "WHERE course_number = ?;";
-        try (PreparedStatement stmt = db.prepareStatement(query)) {
-            stmt.setString(1, course_number);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (!rs.next()) {
-                    System.err.format("%s: class does not exist%n", course_number);
+public void selectClass (String course_number) throws SQLException {
+    String query =
+            "SELECT class_id, course_number,term\n" +
+                    "FROM classes\n" +
+                    "WHERE course_number = ?;";
+    try (PreparedStatement stmt = db.prepareStatement(query, ResultSet.TYPE_SCROLL_INSENSITIVE,
+            ResultSet.CONCUR_UPDATABLE)) {
+        stmt.setString(1, course_number);
+        try (ResultSet rs = stmt.executeQuery()) {
+            if (!rs.next()) {
+                System.err.format("%s: class does not exist%n", course_number);
+                return;
+            }else {
+                String term = rs.getString("term");
+                if(isCurrentTerm(term)){
+                    System.err.format("Class is not in the current term%n");
                     return;
-                }else {
-                    String term = rs.getString("term");
-                    if(isCurrentTerm(term)){
-                        System.err.format("Class is not in the current term%n");
-                        return;
-                    }
                 }
-                active_class_pkey = rs.getInt("class_id");
-                System.out.format("%s %s%n",
-                        rs.getString("class_id"),
-                        rs.getString("course_number"),
-                        rs.getString("term"));
             }
+            rs.last();
+
+            int rowCount = rs.getRow();
+
+                if(rowCount == 1) {
+                    active_class_pkey = rs.getInt("class_id");
+                    System.out.format("%s %s %s %n",
+                            rs.getString("class_id"),
+                            rs.getString("course_number"),
+                            rs.getString("term"));
+                } else {
+                    System.err.format("Too many %s classes to select one %n", course_number);
+                    return;
+                }
+
         }
     }
+}
+
+
 
     public boolean isCurrentTerm(String term){
         String curr_term;
