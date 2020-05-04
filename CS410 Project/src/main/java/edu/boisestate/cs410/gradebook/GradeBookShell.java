@@ -493,24 +493,57 @@ public class GradeBookShell {
 
     @Command
     public void grade(String itemname,String username, int grade) throws SQLException{
-        String insertGrade = "insert into grades (item_id, student_id, grade) Values (?, ?,?)";
+        boolean needsUpdate = false;
+        int[] grades_keys = getExistingGradeIDs(itemname,username);
+        int p_value = getPointValue(itemname);
         int grade_id;
+        String insertGrade = "insert into grades (item_id, student_id, grade) Values (?, ?,?)";
+        String updateGrades = "Update grades set grade = ? where item_id = ? and student_id = ?";
+
+        if(grade > p_value && p_value != -1){
+            System.out.println("Nice try, grade value exceeds number of points configured for item: " + p_value);
+            return;
+        }
+        if(grades_keys != null){
+            needsUpdate = true;
+        }else{
+            grades_keys = getNewGradeIDs(itemname,username);
+        }
+
         db.setAutoCommit(false);
         try {
-            try (PreparedStatement stmt = db.prepareStatement(insertGrade, Statement.RETURN_GENERATED_KEYS)) {
-                stmt.setString(1, itemname);
-                stmt.setString(2, username);
-                stmt.setInt(3, grade);
-                stmt.executeUpdate();
-                // fetch the generated class_id
-                try (ResultSet rs = stmt.getGeneratedKeys()) {
-                    if (!rs.next()) {
-                        throw new RuntimeException("no grade id generated");
+            if(needsUpdate){
+                try (PreparedStatement stmt = db.prepareStatement(updateGrades, Statement.RETURN_GENERATED_KEYS)) {
+                    stmt.setInt(1, grade);
+                    stmt.setInt(2, grades_keys[0]);
+                    stmt.setInt(3, grades_keys[1]);
+                    stmt.executeUpdate();
+                    // fetch the generated class_id
+                    try (ResultSet rs = stmt.getGeneratedKeys()) {
+                        if (!rs.next()) {
+                            throw new RuntimeException("no grade id generated");
+                        }
+                        grade_id = rs.getInt(1);
+                        System.out.format("updated grade: %d%n", grade_id);
                     }
-                    grade_id = rs.getInt(1);
-                    System.out.format("Creating enrollment %d%n", grade_id);
+                }
+            }else{
+                try (PreparedStatement stmt = db.prepareStatement(insertGrade, Statement.RETURN_GENERATED_KEYS)) {
+                    stmt.setInt(1, grades_keys[0]);
+                    stmt.setInt(2, grades_keys[1]);
+                    stmt.setInt(3, grade);
+                    stmt.executeUpdate();
+                    // fetch the generated class_id
+                    try (ResultSet rs = stmt.getGeneratedKeys()) {
+                        if (!rs.next()) {
+                            throw new RuntimeException("no grade id generated");
+                        }
+                        grade_id = rs.getInt(1);
+                        System.out.format("Creating grade: %d%n", grade_id);
+                    }
                 }
             }
+
             db.commit();
         } catch (SQLException | RuntimeException e) {
             db.rollback();
@@ -521,8 +554,9 @@ public class GradeBookShell {
 
     }
 
-    public boolean gradeExists(String itemname, String username) throws SQLException{
-        String selectItemId = "select g.item_id from grades g\n" +
+    public int[] getExistingGradeIDs(String itemname, String username) throws SQLException{
+        int[] retVal = new int[2];
+        String selectItemId = "select g.item_id,g.student_id from grades g\n" +
                 "Join items i using(item_id)\n" +
                 "Join students s on g.student_id = s.student_id\n" +
                 "where i.name = ?\n" +
@@ -532,19 +566,93 @@ public class GradeBookShell {
             stmt.setString(2, username);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (!rs.next()) {
-                    System.err.format("%s: item does not exist not exist%n", itemname );
-                    return false;
+                    //System.err.format("%s: item does not exist%n", itemname );
+                    return null;
+                }else{
+                    retVal[0] = rs.getInt("item_id");
+                    retVal[1] = rs.getInt("Student_id");
+                    return retVal;
                 }
-                active_class_pkey = rs.getInt("class_id");
-                System.out.format("%s %s%n",
-                        rs.getString("class_id"),
-                        rs.getString("course_number"),
-                        rs.getString("term"));
+
             }
         }
-        return true;
-
     }
+
+    public int getPointValue(String itemname) throws SQLException{
+        String selectPointValue = "select i.point_value from items i\n" +
+                "Join categories c on i.cat_id = c.cat_id\n" +
+                "where i.name = ?\n" +
+                "  and c.class_id = ?";
+        try (PreparedStatement stmt = db.prepareStatement(selectPointValue)) {
+            stmt.setString(1, itemname);
+            stmt.setInt(2, active_class_pkey);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    System.err.format("point value for item does not exist %n");
+                    return -1;
+                } else {
+                    return rs.getInt("point_value");
+                }
+
+            }
+        }
+    }
+
+    public int[] getNewGradeIDs(String itemname, String username) throws SQLException{
+        int[] retVal = new int[2];
+        String selectPointValue = "select i.item_id, sic.student_id from items i\n" +
+                "Join categories c using(cat_id)\n" +
+                "Join students_in_classes sic on c.class_id = sic.class_id\n" +
+                "Join students s using(student_id)\n" +
+                "where c.class_id = ? and s.username = ? and i.name = ?";
+        try (PreparedStatement stmt = db.prepareStatement(selectPointValue)) {
+            stmt.setInt(1,active_class_pkey);
+            stmt.setString(2, username);
+            stmt.setString(3, itemname);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    System.err.format("No Id's returned %n");
+                    return null;
+                } else {
+                    retVal[0] = rs.getInt("item_id");
+                    retVal[1] = rs.getInt("student_id");
+                    return retVal;
+                }
+
+            }
+        }
+    }
+
+    @Command
+    public void studentGrades(String username) throws SQLException{
+        String selectGrades = "select i.name, g.grade from items i\n" +
+                "Join grades g using(item_id)\n" +
+                "Join students s using (student_id)\n" +
+                "Join categories c using(cat_id)\n" +
+                "where s.username = ? and c.class_id = ?\n" +
+                "group by i.cat_id, i.name,g.grade,c.class_id";
+        try (PreparedStatement stmt = db.prepareStatement(selectGrades)) {
+            stmt.setString(1, username);
+            stmt.setInt(2,active_class_pkey);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    System.err.format("no grades exist for student:%s %n",username);
+                    return;
+                } else {
+                    System.out.format("%s %d %n",
+                            rs.getString("name"),
+                            rs.getInt("grade"));
+
+                    while (rs.next()) {
+                        System.out.format("%s %d %n",
+                                rs.getString("name"),
+                                rs.getInt("grade"));
+                    }
+                }
+            }
+        }
+    }
+
 
     public static void main(String[] args) throws IOException, SQLException {
         // First (and only) command line argument: database URL
