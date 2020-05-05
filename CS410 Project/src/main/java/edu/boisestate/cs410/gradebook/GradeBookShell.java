@@ -21,7 +21,7 @@ public class GradeBookShell {
     @Command
     public void showClass () throws SQLException {
         String query =
-                "SELECT class_id, course_number \n" +
+                "SELECT class_id, course_number, term, section_number\n" +
                         "FROM classes\n" +
                         "WHERE class_id = ?;";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
@@ -31,9 +31,11 @@ public class GradeBookShell {
                     System.err.format("%d: class does not exist%n", active_class_pkey);
                     return;
                 }
-                System.out.format("%s %s %n",
+                System.out.format("%d %s %s % d %n",
                         rs.getInt("class_id"),
-                        rs.getString("course_number"));
+                        rs.getString("course_number"),
+                        rs.getString("term"),
+                        rs.getInt("section_number"));
             }
         }
     }
@@ -283,8 +285,8 @@ public void selectClass (String course_number, String term) throws SQLException 
     @Command
     public void listClasses () throws SQLException {
         String query =
-                "select course_number, count(student_id) as num_students from classes c\n" +
-                        "join students_in_classes sic on sic.class_id = c.class_id\n" +
+                "select course_number, term, section_number, count(student_id) as num_students from classes c\n" +
+                        "full join students_in_classes sic on sic.class_id = c.class_id\n" +
                         "group by c.class_id";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
 
@@ -293,13 +295,17 @@ public void selectClass (String course_number, String term) throws SQLException 
                     System.err.format("There are no Students in any classes%n");
                     return;
                 }
-                System.out.format("%s %d %n",
+                System.out.format("%s %s %d %d %n",
                         rs.getString("course_number"),
+                        rs.getString("term"),
+                        rs.getInt("section_number"),
                         rs.getInt("num_students"));
 
                 while (rs.next()) {
-                    System.out.format("%s %d %n",
+                    System.out.format("%s %s %d %d %n",
                             rs.getString("course_number"),
+                            rs.getString("term"),
+                            rs.getInt("section_number"),
                             rs.getInt("num_students"));
                 }
             }
@@ -312,9 +318,9 @@ public void selectClass (String course_number, String term) throws SQLException 
                 "SELECT  course_number,name, weight\n" +
                         " FROM classes\n" +
                         "join categories using (class_id)\n" +
-                        "WHERE term = ?;";
+                        "WHERE class_id = ?;";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
-            stmt.setString(1, term);
+            stmt.setInt(1, active_class_pkey);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (!rs.next()) {
                     System.err.format("No classes for this term:%s%n", term);
@@ -335,7 +341,7 @@ public void selectClass (String course_number, String term) throws SQLException 
     }
 
     @Command
-    public void addCategory (String name, int weight,int class_id) throws SQLException {
+    public void addCategory (String name, int weight) throws SQLException {
         String insertCategory = "INSERT INTO categories (name, weight,class_id) VALUES (?, ?,?)";
         int cat_id;
         db.setAutoCommit(false);
@@ -365,7 +371,7 @@ public void selectClass (String course_number, String term) throws SQLException 
     }
 
     @Command
-    public void addItems (String name, String cat_name ,String description,int point_value) throws SQLException {
+    public void addItem (String name, String cat_name ,String description,int point_value) throws SQLException {
         String insertItem = "INSERT INTO items (name, description,point_value,cat_id) VALUES (?, ?,?,?)";
         String selectCatID = "select cat_id from categories where name = ? and class_id = ?";
         int new_item_id;
@@ -377,7 +383,7 @@ public void selectClass (String course_number, String term) throws SQLException 
                 stmt.setInt(2,active_class_pkey);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (!rs.next()) {
-                        System.err.format("Nothing returned:%s%n");
+                        System.err.println("Categoy not found for item.");
                         return;
                     }
                     ret_cat_id = rs.getInt("cat_id");
@@ -450,7 +456,7 @@ public void selectClass (String course_number, String term) throws SQLException 
                         System.out.println("new_item_id: " + new_item_id);
                         System.out.format("Creating item %d%n", new_item_id);
                         enroll_id = new_item_id;
-                        //enroll_in_active_class(new_item_id, active_class_pkey);
+
                     }
                 }
             }else if(needsUpdate){
@@ -471,8 +477,6 @@ public void selectClass (String course_number, String term) throws SQLException 
                     }
                 }
 
-            }else {
-
             }
 
             db.commit();
@@ -489,17 +493,19 @@ public void selectClass (String course_number, String term) throws SQLException 
         String checkStudent = "select name,student_id from students where username = ?";
         int new_item_id;
         String ret_name;
-        int student_id;
+        int student_id = 0;
+        boolean enroll = false;
         db.setAutoCommit(false);
         try {
             try (PreparedStatement stmt = db.prepareStatement(checkStudent)) {
                 stmt.setString(1,username);
                 try (ResultSet rs = stmt.executeQuery()) {
                     if (!rs.next()) {
-                        throw new RuntimeException("no student by that username");
+                        System.err.format("no student in database by username: %s%n",username);
                     }else{
                         ret_name = rs.getString("name");
                         student_id = rs.getInt("student_id");
+                        enroll = true;
                     }
 
                 }
@@ -511,7 +517,10 @@ public void selectClass (String course_number, String term) throws SQLException 
         } finally {
             db.setAutoCommit(true);
         }
-        enroll_in_active_class(student_id,active_class_pkey);
+        if(enroll){
+            enroll_in_active_class(student_id,active_class_pkey);
+        }
+
     }
     public void enroll_in_active_class (int student_id, int class_id) throws SQLException {
         String enroll = "insert into students_in_classes (student_id,class_id) values (?,?)";
@@ -551,7 +560,7 @@ public void selectClass (String course_number, String term) throws SQLException 
         String updateGrades = "Update grades set grade = ? where item_id = ? and student_id = ?";
 
         if(grade > p_value && p_value != -1){
-            System.out.println("Nice try, grade value exceeds number of points configured for item: " + p_value);
+            System.err.format("Nice try, grade value exceeds number of points configured for item :%s%n " , itemname);
             return;
         }
         if(grades_keys != null){
@@ -744,14 +753,14 @@ public void selectClass (String course_number, String term) throws SQLException 
                         "join students_in_classes sic using (student_id)\n" +
                         "join classes c using (class_id)\n" +
                         "WHERE class_id = ?\n" +
-                        "and upper(name) LIKE upper(?) or upper(username) LIKE upper(?);";
+                        "and (upper(name) LIKE upper(?) or upper(username) LIKE upper(?));";
         try (PreparedStatement stmt = db.prepareStatement(query)) {
             stmt.setInt(1, active_class_pkey);
             stmt.setString(2, "%" + EKS + "%");
             stmt.setString(3, "%" + EKS + "%");
             try (ResultSet rs = stmt.executeQuery()) {
                 if (!rs.next()) {
-                    System.err.format("%d: class does not exist%n", active_class_pkey, EKS);
+                    System.err.format("No students with: %s in name for class: %d%n", EKS,active_class_pkey );
                     return;
                 }
                 System.out.format("%s %s %s %s %s %n",
